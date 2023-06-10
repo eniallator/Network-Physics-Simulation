@@ -59,64 +59,18 @@ class Node {
       0
     );
 
-    // if (this.#connections.length > 1) {
-    //   ctx.lineWidth = 2;
-    //   ctx.strokeStyle = "lightgreen";
-    //   const right = this.#pos
-    //     .copy()
-    //     .add(new Vector(150, 0).setAngle(nodeOrientation));
-    //   ctx.moveTo(this.#pos.x, this.#pos.y);
-    //   ctx.lineTo(right.x, right.y);
-    //   ctx.stroke();
-    // }
-
-    ctx.lineWidth = 3;
     for (const connection of this.#connections) {
+      if (this.#isStuck && connection.node.#isStuck) continue;
       const posDiff = connection.node.#pos.copy().sub(this.#pos);
+      const resultantRestoringForce = Vector.ZERO;
       if (!connection.foreign) {
         const radiusRestoringVec = posDiff
           .copy()
           .setMagnitude(posDiff.getMagnitude() - connection.radius)
-          .multiply(connection.radiusRestoringStrength / 2);
+          .multiply(connection.radiusRestoringStrength);
 
-        // ctx.strokeStyle = "blue";
-        // ctx.moveTo(this.#pos.x, this.#pos.y);
-        // ctx.lineTo(
-        //   this.#pos.x + radiusRestoringVec.x,
-        //   this.#pos.y + radiusRestoringVec.y
-        // );
-        // ctx.stroke();
-        // ctx.moveTo(connection.node.#pos.x, connection.node.#pos.y);
-        // ctx.lineTo(
-        //   connection.node.#pos.x - radiusRestoringVec.x,
-        //   connection.node.#pos.y - radiusRestoringVec.y
-        // );
-        // ctx.stroke();
-
-        this.addAccel(radiusRestoringVec);
-        connection.node.addAccel(radiusRestoringVec.multiply(-1));
+        resultantRestoringForce.add(radiusRestoringVec);
       }
-      // if (this.#connections.length > 1) {
-      //   const bearingDiff = angleMod(
-      //     posDiff.getAngle() + connection.desiredBearing - nodeOrientation
-      //   );
-      //   // Bearing restoring force is **always** perpendicular to the radius restoring force
-      //   const bearingRestoringForce = new Vector(
-      //     -posDiff.y,
-      //     posDiff.x
-      //   ).setMagnitude(bearingDiff * connection.bearingRestoringStrength * 3);
-
-      //   // ctx.strokeStyle = "yellow";
-      //   // ctx.moveTo(this.#pos.x, this.#pos.y);
-      //   // ctx.lineTo(
-      //   //   this.#pos.x + bearingRestoringForce.x,
-      //   //   this.#pos.y + bearingRestoringForce.y
-      //   // );
-      //   // ctx.stroke();
-
-      //   this.addAccel(bearingRestoringForce);
-      //   connection.node.addAccel(bearingRestoringForce.multiply(-1));
-      // }
       if (this.#connections.length > 1) {
         const bearingDiff = angleMod(
           nodeOrientation - connection.desiredBearing + posDiff.getAngle()
@@ -129,138 +83,19 @@ class Node {
             (bearingDiff / Math.PI) * connection.bearingRestoringStrength
           );
 
-        // ctx.strokeStyle = "yellow";
-        // ctx.moveTo(this.#pos.x, this.#pos.y);
-        // ctx.lineTo(
-        //   this.#pos.x + bearingRestoringForce.x,
-        //   this.#pos.y + bearingRestoringForce.y
-        // );
-        // ctx.stroke();
-
-        this.addAccel(bearingRestoringForce);
-        connection.node.addAccel(bearingRestoringForce.multiply(-1));
+        resultantRestoringForce.add(bearingRestoringForce);
+      }
+      if (this.#isStuck) {
+        connection.node.addAccel(resultantRestoringForce.multiply(-1));
+      } else if (connection.node.#isStuck) {
+        this.addAccel(resultantRestoringForce);
+      } else {
+        resultantRestoringForce.divide(2);
+        this.addAccel(resultantRestoringForce);
+        connection.node.addAccel(resultantRestoringForce.multiply(-1));
       }
     }
-
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 5;
   }
-
-  // calcUpdates() {
-  //   if (this.#connections.length < 1) return;
-
-  //   const nodeOrientation = Vector.ZERO.add(
-  //     ...this.#connections.map(({ desiredBearing, node }) =>
-  //       Vector.RIGHT.setAngle(
-  //         node.#pos.copy().sub(this.#pos).getAngle() - desiredBearing
-  //       )
-  //     )
-  //   ).normalise();
-  //   /*
-  //   (4, 0) - Math.PI/2 = 0, -1
-  //   (0, -5) - Math.PI = 0, -1
-
-  //   (4, 0) - (0, -1) = (1, 1)
-  //   (0, -5) - (-1, 0) = (1, -1)
-
-  //   avg = 0, -1
-
-  //   desired = (0, -1) - (0, -1) + (4, 0) = (4, 0)
-
-  //   */
-  //   // const nodeOrientation = Vector.RIGHT.setAngle(
-  //   //   this.#connections.reduce(
-  //   //     (acc, { desiredBearing, node }) =>
-  //   //       acc +
-  //   //       Math.acos(
-  //   //         node.#pos
-  //   //           .copy()
-  //   //           .sub(this.#pos)
-  //   //           .normalise()
-  //   //           .dot(Vector.RIGHT.setAngle(desiredBearing))
-  //   //       ),
-  //   //     0
-  //   //   ) / this.#connections.length
-  //   // );
-
-  //   // if (this.#connections.length > 1) {
-  //   //   ctx.lineWidth = 2;
-  //   //   ctx.strokeStyle = "lightgreen";
-  //   //   const right = this.#pos.copy().add(nodeOrientation.copy().multiply(150));
-  //   //   ctx.moveTo(this.#pos.x, this.#pos.y);
-  //   //   ctx.lineTo(right.x, right.y);
-  //   //   ctx.stroke();
-  //   // }
-
-  //   ctx.lineWidth = 3;
-  //   for (const connection of this.#connections) {
-  //     const posDiff = connection.node.#pos.copy().sub(this.#pos);
-  //     if (!connection.foreign) {
-  //       const radiusRestoringVec = posDiff
-  //         .copy()
-  //         .setMagnitude(posDiff.getMagnitude() - connection.radius)
-  //         .multiply(connection.radiusRestoringStrength / 2);
-
-  //       // ctx.strokeStyle = "blue";
-  //       // ctx.moveTo(this.#pos.x, this.#pos.y);
-  //       // ctx.lineTo(
-  //       //   this.#pos.x + radiusRestoringVec.x,
-  //       //   this.#pos.y + radiusRestoringVec.y
-  //       // );
-  //       // ctx.stroke();
-  //       // ctx.moveTo(connection.node.#pos.x, connection.node.#pos.y);
-  //       // ctx.lineTo(
-  //       //   connection.node.#pos.x - radiusRestoringVec.x,
-  //       //   connection.node.#pos.y - radiusRestoringVec.y
-  //       // );
-  //       // ctx.stroke();
-
-  //       this.addAccel(radiusRestoringVec);
-  //       connection.node.addAccel(radiusRestoringVec.multiply(-1));
-  //     }
-  //     if (this.#connections.length > 1) {
-  //       // const bearingDiff = posDiff
-  //       //   .getNorm()
-  //       //   .sub(Vector.RIGHT.setAngle(connection.desiredBearing))
-  //       //   .add(nodeOrientation);
-  //       const bearingDiff = Vector.RIGHT.setAngle(connection.desiredBearing)
-  //         .sub(nodeOrientation)
-  //         .add(posDiff.getNorm());
-  //       // Bearing restoring force is **always** perpendicular to the radius restoring force
-  //       // const bearingRestoringForce = new Vector(
-  //       //   -posDiff.y,
-  //       //   posDiff.x
-  //       // ).multiply(
-  //       //   bearingDiff.getMagnitude() * connection.bearingRestoringStrength
-  //       // );
-  //       const forceAxis = new Vector(-posDiff.y, posDiff.x);
-  //       // const bearingRestoringForce = forceAxis.multiply(
-  //       //   (forceAxis.dot(bearingDiff) >= 0 ? 1 : -1) *
-  //       //     bearingDiff.getMagnitude() *
-  //       //     connection.bearingRestoringStrength
-  //       // );
-
-  //       const bearingRestoringForce = forceAxis.multiply(
-  //         forceAxis.getNorm().dot(bearingDiff) *
-  //           connection.bearingRestoringStrength
-  //       );
-
-  //       ctx.strokeStyle = "yellow";
-  //       ctx.moveTo(this.#pos.x, this.#pos.y);
-  //       ctx.lineTo(
-  //         this.#pos.x + bearingRestoringForce.x,
-  //         this.#pos.y + bearingRestoringForce.y
-  //       );
-  //       ctx.stroke();
-
-  //       this.addAccel(bearingRestoringForce);
-  //       connection.node.addAccel(bearingRestoringForce.multiply(-1));
-  //     }
-  //   }
-
-  //   ctx.strokeStyle = "white";
-  //   ctx.lineWidth = 5;
-  // }
 
   update(dt) {
     const vel = this.#pos.copy().sub(this.#lastPos);

@@ -40,7 +40,7 @@ system.forEach(
       100,
       0,
       Math.PI - (2 * Math.PI) / (n - 1),
-      300,
+      150,
       50
     )
   // node.addConnection(arr[i - 1], 100, 0, Math.PI, 50, 2)
